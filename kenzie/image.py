@@ -1,18 +1,17 @@
 from flask import jsonify, request, send_from_directory
 import os
+from app import FILES_DIRECTORY
 
-FILES_DIRECTORY = './files'
 SUPPORTED_FILES = ['jpg', 'png', 'gif']
 
 def get_files(file_type: str):
-    if file_type == 'all':
+    if not file_type:
         output_list = [dir_files for _, _, dir_files in os.walk(FILES_DIRECTORY) if len(dir_files) != 0]
         return jsonify(output_list), 200
-    else:
-        if file_type in SUPPORTED_FILES:
-            output_list = os.listdir(f'{FILES_DIRECTORY}/{file_type}')
-            return jsonify(output_list), 200
-          
+    elif file_type in SUPPORTED_FILES:
+        output_list = os.listdir(f'{FILES_DIRECTORY}/{file_type}')
+        return jsonify(output_list), 200
+    return {'message': 'Formato inválido'}, 415
 
 def upload_image():
     received_file = request.files['file']

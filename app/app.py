@@ -10,7 +10,7 @@ def home():
     return 'Hey'
 
 
-@app.get('/files', defaults={'file_type': 'all'})
+@app.get('/files', defaults={'file_type': None})
 @app.get('/files/<file_type>')
 def get_files(file_type):
     return image.get_files(file_type)
