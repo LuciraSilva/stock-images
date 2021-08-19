@@ -1,8 +1,8 @@
 from flask import Flask
 from kenzie import image
-
+from os import environ
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = int(environ['MAX_CONTENT_LENGTH'])
 
 
 @app.get('/')
