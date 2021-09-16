@@ -1,5 +1,6 @@
 from flask import request, jsonify, safe_join, send_from_directory
 from werkzeug.utils import secure_filename
+from app.exceptions.images_errors import EmptyFolder, InvalidTypeError, ImageConflict
 import imghdr
 import os
 
@@ -16,21 +17,27 @@ def get_images():
     return jsonify(all_images), 200
 
         
-def get_images_by_ext(image_type):
+def get_images_by_type(image_type: str):
 
-    #TODO: CRIAR EXCEÇÕES, FAZENDO O TIPO ESTOURAR ERRO
+    try:
+        if not image_type in SUPPORTED_TYPES:
+            raise InvalidTypeError('Invalid type of image')
 
-    if not image_type in SUPPORTED_TYPES:
-        return {'message': 'Formato inválido'}, 415
+        if image_type == 'jpeg':
+            image_type = 'jpg'
 
-    images_path = safe_join(ROOT_DIRECTORY, image_type)
+        images_path = safe_join(ROOT_DIRECTORY, image_type)
 
-    filtered_images = os.listdir(images_path)
+        filtered_images = os.listdir(images_path)
 
-    return jsonify(filtered_images), 200
+        return jsonify(filtered_images), 200
 
+    except InvalidTypeError as e:
+
+        return {'message': str(e)}, 415
 
 def download_image(image_name: str):
+
     image_type = image_name.split('.')[-1]
 
     image_path = safe_join(ROOT_DIRECTORY, image_type)
@@ -39,58 +46,78 @@ def download_image(image_name: str):
 
 
 def download_zip_images(image_type: str):
-    compression_rate = request.args.get('compression_rate')
 
-    if image_type == 'jpeg':
-        image_type = 'jpg'
+    compression_rate = request.args.get('compression_rate', 6, int)
 
-    path = safe_join(ROOT_DIRECTORY, image_type)
+    try:
 
-    #TODO: CRIAR EXCEÇÕES FAZENDO ESTOURAR ERRO QUANDO A PASTA ESTIVER VAZIA
+        if image_type not in SUPPORTED_TYPES:
+            raise InvalidTypeError('Invalid type of image')
 
-    for dirpath, _, images in os.walk(ROOT_DIRECTORY):
-         if dirpath.endswith(image_type) and len(images) == 0:
-             return {'message': 'pasta vazia'}, 200
+        if image_type == 'jpeg':
+            image_type = 'jpg'
 
-    a = os.system(f'zip -{compression_rate} -r /tmp/{image_type}.zip {path}')
+        path = safe_join(ROOT_DIRECTORY, image_type)
 
-    return send_from_directory(directory='/tmp', path=f'{image_type}.zip', as_attachment=True)
+        for dirpath, _, images in os.walk(ROOT_DIRECTORY):
 
+            if dirpath.endswith(image_type) and len(images) == 0:
 
+                raise EmptyFolder('this folder is empty')
+
+        os.system(f'zip -{compression_rate} -r /tmp/{image_type}.zip {path}')
+
+        return send_from_directory(directory='/tmp', path=f'{image_type}.zip', as_attachment=True)
+
+    except InvalidTypeError as e:
+
+        return {'message': str(e)}, 415
+
+    except EmptyFolder as e:
+
+        return {'message': str(e)}, 200
+
+    
 
 def upload_image():
 
-    received_image = request.files['file']
-
-    image_name = secure_filename(received_image.filename)
-
-    image_type = imghdr.what(received_image)
-
-
-    if image_type == 'jpeg':
-        image_type = 'jpg'
-
-    image_path = safe_join('{0}/{1}'.format(ROOT_DIRECTORY, image_type), image_name)
-    
-
-    #TODO: COLOCAR EXCEÇÃO DE TIPO
-
     try:
+
+        received_image = request.files['file']
+
+        image_name = secure_filename(received_image.filename)
+
+        image_type = imghdr.what(received_image)
+
+
         if image_type not in SUPPORTED_TYPES:
-            return {'message': 'Formato inválido, Tente enviar arquivos jpg, gif ou png'}, 415
+            raise InvalidTypeError('Invalid type of image')
+
+        if image_type == 'jpeg':
+            image_type = 'jpg'
+
+        image_path = safe_join('{0}/{1}'.format(ROOT_DIRECTORY, image_type), image_name)
+
 
         if os.path.isfile(image_path):
-            return {'message': 'Arquivo já existente'}, 409
-        
+            raise ImageConflict ('image already exists')
+   
         received_image.save(image_path)
 
-        return {'message': f'Arquivo {image_name} adicionado com sucesso!'}, 201
+        return {'message': f'File {image_name} added with successful!'}, 201
+
+    except InvalidTypeError as e:
+
+        return {'message': str(e)}, 415
+
+    except ImageConflict as e:
+
+        return {'message': str(e)}, 409
 
     except (SyntaxError, TypeError, IsADirectoryError):
 
-        return {'message': """Erro ao adicionar arquivo.\
-        Certifique-se de que adicionou a chave e o arquivo corretamente"""}, 406
-
+        return {'message': """Failed to upload.\
+        Make sure you send the correct data"""}, 406
 
 
 

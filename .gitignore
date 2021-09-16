@@ -3,5 +3,5 @@ venv/
 .env
 .vscode
 **__pycache__
-files/
+images/
 .pytest_cache
