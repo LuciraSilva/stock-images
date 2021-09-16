@@ -1,7 +1,7 @@
 venv/
+images/
 *pyc
 .env
 .vscode
 **__pycache__
-images/
 .pytest_cache
