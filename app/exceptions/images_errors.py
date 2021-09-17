@@ -1,9 +1,0 @@
-
-class InvalidTypeError(Exception):
-    ...
-
-class EmptyFolder(Exception):
-    ...    
-
-class ImageConflict(Exception):
-    ...

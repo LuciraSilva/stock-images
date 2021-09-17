@@ -1,6 +1,6 @@
 from flask import request, jsonify, safe_join, send_from_directory
 from werkzeug.utils import secure_filename
-from app.exceptions.images_errors import EmptyFolder, InvalidTypeError, ImageConflict
+from app.exceptions.images_exceptions import EmptyFolderError, InvalidTypeError, ImageConflictError
 import imghdr
 import os
 
@@ -21,7 +21,7 @@ def get_images_by_type(image_type: str):
 
     try:
         if not image_type in SUPPORTED_TYPES:
-            raise InvalidTypeError('Invalid type of image')
+            raise InvalidTypeError
 
         if image_type == 'jpeg':
             image_type = 'jpg'
@@ -52,7 +52,7 @@ def download_zip_images(image_type: str):
     try:
 
         if image_type not in SUPPORTED_TYPES:
-            raise InvalidTypeError('Invalid type of image')
+            raise InvalidTypeError
 
         if image_type == 'jpeg':
             image_type = 'jpg'
@@ -63,7 +63,7 @@ def download_zip_images(image_type: str):
 
             if dirpath.endswith(image_type) and len(images) == 0:
 
-                raise EmptyFolder('this folder is empty')
+                raise EmptyFolderError
 
         os.system(f'zip -{compression_rate} -r /tmp/{image_type}.zip {path}')
 
@@ -73,7 +73,7 @@ def download_zip_images(image_type: str):
 
         return {'message': str(e)}, 415
 
-    except EmptyFolder as e:
+    except EmptyFolderError as e:
 
         return {'message': str(e)}, 200
 
@@ -91,7 +91,7 @@ def upload_image():
 
 
         if image_type not in SUPPORTED_TYPES:
-            raise InvalidTypeError('Invalid type of image')
+            raise InvalidTypeError
 
         if image_type == 'jpeg':
             image_type = 'jpg'
@@ -100,7 +100,7 @@ def upload_image():
 
 
         if os.path.isfile(image_path):
-            raise ImageConflict ('image already exists')
+            raise ImageConflictError
    
         received_image.save(image_path)
 
@@ -110,7 +110,7 @@ def upload_image():
 
         return {'message': str(e)}, 415
 
-    except ImageConflict as e:
+    except ImageConflictError as e:
 
         return {'message': str(e)}, 409
 
